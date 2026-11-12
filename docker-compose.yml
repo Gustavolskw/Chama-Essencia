@@ -1,0 +1,70 @@
+# Somente o gateway (nginx) publica portas; mongo, backend e frontend ficam na rede interna.
+# Atrás de um Traefik, use também docker-compose.traefik.yml (TRAEFIK_ENABLED=true no .env).
+# Não defina "name:" aqui: o nome do projeto (pasta) compõe o nome do volume com os dados do MongoDB.
+
+volumes:
+  mongo-data:
+  nginx-certs:
+
+networks:
+  internal:
+    driver: bridge
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  # Sem container_name para permitir réplicas: docker compose up --scale backend=N
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo:27017/chamaessencia?authSource=admin
+      JWT_SECRET: ${JWT_SECRET}
+      DEFAULT_USER: ${DEFAULT_USER:-chama_e_essencia}
+      DEFAULT_USER_PASSWORD: ${DEFAULT_USER_PASSWORD:-}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - internal
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    networks:
+      - internal
+
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    container_name: nginx-chama-essencia
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-8090}:80"
+      - "${HTTPS_PORT:-8453}:443"
+    volumes:
+      - nginx-certs:/etc/nginx/certs
+    environment:
+      - NGINX_SELF_SIGNED_CERT_SUBJECT=${NGINX_SELF_SIGNED_CERT_SUBJECT:-/CN=localhost}
+      - NGINX_SELF_SIGNED_CERT_SAN=${NGINX_SELF_SIGNED_CERT_SAN:-DNS:localhost}
+      - NGINX_FORCE_HTTPS=${NGINX_FORCE_HTTPS:-false}
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - internal

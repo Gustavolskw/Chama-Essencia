@@ -1,0 +1,38 @@
+# Override para publicar atrás de um Traefik já rodando no servidor
+# (padrão de https://doc.traefik.io/traefik/expose/docker/basic/: rede externa compartilhada "proxy").
+#
+#   docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d
+#   (o contador.sh faz isso sozinho quando TRAEFIK_ENABLED=true no .env)
+#
+# O Traefik cuida do domínio e do certificado (Let's Encrypt) e encaminha HTTP para o nginx na porta 80.
+
+networks:
+  proxy:
+    external: true
+    name: ${TRAEFIK_NETWORK:-proxy}
+
+services:
+  nginx:
+    # Quem recebe 80/443 é o Traefik; o gateway não publica portas no host.
+    ports: !reset []
+    networks:
+      - internal
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-proxy}"
+      - "traefik.http.services.chama-essencia.loadbalancer.server.port=80"
+
+      # HTTPS - domínio do sistema
+      - "traefik.http.routers.chama-essencia.rule=Host(`${APP_DOMAIN:?defina APP_DOMAIN no .env}`)"
+      - "traefik.http.routers.chama-essencia.entrypoints=${TRAEFIK_ENTRYPOINT_HTTPS:-websecure}"
+      - "traefik.http.routers.chama-essencia.tls=true"
+      - "traefik.http.routers.chama-essencia.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.routers.chama-essencia.service=chama-essencia"
+
+      # HTTP -> HTTPS
+      - "traefik.http.routers.chama-essencia-http.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.chama-essencia-http.entrypoints=${TRAEFIK_ENTRYPOINT_HTTP:-web}"
+      - "traefik.http.routers.chama-essencia-http.middlewares=chama-essencia-redirect-https"
+      - "traefik.http.middlewares.chama-essencia-redirect-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.chama-essencia-redirect-https.redirectscheme.permanent=true"

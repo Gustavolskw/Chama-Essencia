@@ -1,0 +1,9 @@
+.env
+backups/
+backend/target/
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Planilha de exemplo com custos reais fica fora do repositório.
+EXEMPLO/
