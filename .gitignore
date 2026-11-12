@@ -7,3 +7,6 @@ frontend/.angular/
 
 # Planilha de exemplo com custos reais fica fora do repositório.
 EXEMPLO/
+
+# Cópia local do banco de produção (script, acessos, senhas e backups): nunca vai para o git.
+PROD/
