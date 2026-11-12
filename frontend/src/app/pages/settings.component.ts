@@ -120,6 +120,7 @@ type MarginForm = Omit<Margin, 'id'> & { id: string | null };
       <div class="backdrop" (click)="marginForm.set(null)">
         <form class="card modal" (click)="$event.stopPropagation()" (ngSubmit)="saveMargin(f)">
           <h2>{{ f.id ? 'Editar margem' : 'Nova margem' }}</h2>
+          @if (marginFormError()) { <div class="error">{{ marginFormError() }}</div> }
           <div class="field">
             <label for="mn">Nome</label>
             <input id="mn" name="mn" [(ngModel)]="f.name" maxlength="60" required placeholder="Ex.: Taxa da maquininha">
@@ -175,6 +176,8 @@ export class SettingsComponent implements OnInit {
   marginForm = signal<MarginForm | null>(null);
   marginMsg = signal('');
   marginOk = signal(true);
+  /** Erro ao salvar a margem: aparece dentro do modal (a mensagem da página fica coberta por ele). */
+  marginFormError = signal('');
 
   settings = signal<Settings | null>(null);
   settingsMsg = signal('');
@@ -215,10 +218,12 @@ export class SettingsComponent implements OnInit {
   }
 
   newMargin(): void {
+    this.marginFormError.set('');
     this.marginForm.set({ id: null, name: '', type: 'ADDITIONAL', percent: 0, defaultSelected: true, description: '' });
   }
 
   editMargin(m: Margin): void {
+    this.marginFormError.set('');
     this.marginForm.set({ ...m });
   }
 
@@ -232,7 +237,7 @@ export class SettingsComponent implements OnInit {
         this.marginMsg.set('Margem salva. Pacotes já criados mantêm as margens da época; use "Recalcular" no pacote para aplicar.');
         this.loadMargins();
       },
-      error: err => { this.marginOk.set(false); this.marginMsg.set(errorMessage(err)); },
+      error: err => this.marginFormError.set(errorMessage(err)),
     });
   }
 
