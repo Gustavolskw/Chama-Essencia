@@ -232,14 +232,34 @@ table.data td input, table.data td select { padding: 5px 7px; }
 .auth-page .links { display: flex; justify-content: space-between; margin-top: 16px; gap: 8px; flex-wrap: wrap; }
 .brand-mark { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; color: var(--accent); font-weight: 700; font-size: 16px; }
 
-/* Modal */
+/*
+ * Modal: centralizado na tela (horizontal e vertical). "margin: auto" centraliza sem cortar: se o modal
+ * for mais alto que a tela, ele começa no topo e o fundo rola (centralizar com align-items cortaria o topo).
+ */
 .backdrop {
-  position: fixed; inset: 0; background: rgba(0, 0, 0, .45);
-  display: flex; align-items: flex-start; justify-content: center; padding: 32px 16px; z-index: 10; overflow-y: auto;
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; padding: 24px 16px; overflow-y: auto; overscroll-behavior: contain;
+  background: color-mix(in srgb, #1A1A1A 55%, transparent);
+  backdrop-filter: blur(3px);
+  animation: backdrop-in .2s ease both;
 }
-.modal { width: 100%; max-width: 480px; }
+.backdrop > .modal, .backdrop > form.modal { margin: auto; }
+.modal {
+  width: 100%; max-width: 480px; padding: 20px 22px;
+  border-radius: 16px; border-top: 3px solid var(--brand);
+  box-shadow: 0 24px 60px rgba(26, 26, 26, .28), 0 2px 6px rgba(26, 26, 26, .12);
+  animation: modal-in .25s cubic-bezier(.2, .9, .3, 1.1) both;
+}
 .modal.wide { max-width: 760px; }
-.modal h2 { margin-bottom: 16px; font-size: 18px; }
+.modal h2 { margin-bottom: 16px; font-size: 20px; font-weight: 500; color: var(--accent); }
+/* A página atrás não rola enquanto um modal está aberto. */
+body:has(.backdrop) { overflow: hidden; }
+@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (max-width: 600px) {
+  .backdrop { padding: 12px 8px; }
+  .modal { padding: 16px 14px; }
+}
 .modal > .actions, .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; flex-wrap: wrap; align-items: center; }
 .modal > .actions .spacer, .form-actions .spacer { flex: 1; }
 
@@ -251,8 +271,10 @@ table.data td input, table.data td select { padding: 5px 7px; }
 }
 
 /* Entrada suave das páginas (o componente da rota vem logo após o <router-outlet>). */
-/* Só opacidade: transform aqui prenderia os elementos "position: fixed" (fundo de aroma) dentro da página. */
-router-outlet + * { display: block; animation: page-in .45s ease both; }
+/* Só opacidade: transform aqui prenderia os elementos "position: fixed" (fundo de aroma) dentro da página.
+ * "backwards" (e não "both"): terminada a animação ela deixa de valer. Com "both" a página virava uma camada
+ * própria abaixo do menu fixo do topo, e o menu cobria o topo dos modais. */
+router-outlet + * { display: block; animation: page-in .45s ease backwards; }
 @keyframes page-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* Quem prefere menos movimento não vê animações. */
