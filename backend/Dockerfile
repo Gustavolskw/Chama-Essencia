@@ -3,7 +3,8 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn -q -B dependency:go-offline
 COPY src ./src
-RUN mvn -q -B package -DskipTests
+# Roda os testes (inclui os de segurança do cadastro): se falharem, a imagem não é gerada.
+RUN mvn -q -B package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
